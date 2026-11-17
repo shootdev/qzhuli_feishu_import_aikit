@@ -1,0 +1,355 @@
+{
+  "modules": [
+    {
+      "module": "github.com/Microsoft/go-winio",
+      "version": "v0.6.2",
+      "files": [
+        "third-party-licenses/001-3ad97f550d/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/atotto/clipboard",
+      "version": "v0.1.4",
+      "files": [
+        "third-party-licenses/002-9d660e5c20/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/aymanbagabas/go-osc52/v2",
+      "version": "v2.0.1",
+      "files": [
+        "third-party-licenses/003-f147236038/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/bmatcuk/doublestar/v4",
+      "version": "v4.10.0",
+      "files": [
+        "third-party-licenses/004-73eda3e9b7/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/catppuccin/go",
+      "version": "v0.3.0",
+      "files": [
+        "third-party-licenses/005-e1196e8dde/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/charmbracelet/bubbles",
+      "version": "v0.21.1-0.20250623103423-23b8fd6302d7",
+      "files": [
+        "third-party-licenses/006-fcd958fc1e/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/charmbracelet/bubbletea",
+      "version": "v1.3.6",
+      "files": [
+        "third-party-licenses/007-e95644c7b7/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/charmbracelet/colorprofile",
+      "version": "v0.2.3-0.20250311203215-f60798e515dc",
+      "files": [
+        "third-party-licenses/008-007f5f1c15/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/charmbracelet/huh",
+      "version": "v1.0.0",
+      "files": [
+        "third-party-licenses/009-693086c05e/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/charmbracelet/lipgloss",
+      "version": "v1.1.0",
+      "files": [
+        "third-party-licenses/010-597a55f47b/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/charmbracelet/x/ansi",
+      "version": "v0.9.3",
+      "files": [
+        "third-party-licenses/011-6c0a4ade48/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/charmbracelet/x/cellbuf",
+      "version": "v0.0.13",
+      "files": [
+        "third-party-licenses/012-fb7ad5ebb4/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/charmbracelet/x/exp/strings",
+      "version": "v0.0.0-20240722160745-212f7b056ed0",
+      "files": [
+        "third-party-licenses/013-f4f4138d24/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/charmbracelet/x/term",
+      "version": "v0.2.1",
+      "files": [
+        "third-party-licenses/014-36ef3d698a/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/dustin/go-humanize",
+      "version": "v1.0.1",
+      "files": [
+        "third-party-licenses/015-530b5aa592/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/ebitengine/purego",
+      "version": "v0.10.1",
+      "files": [
+        "third-party-licenses/016-73e7e143bb/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/erikgeiser/coninput",
+      "version": "v0.0.0-20211004153227-1c3628e74d0f",
+      "files": [
+        "third-party-licenses/017-e44a8e8627/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/gofrs/flock",
+      "version": "v0.8.1",
+      "files": [
+        "third-party-licenses/018-046daf9eaf/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/gogo/protobuf",
+      "version": "v1.3.2",
+      "files": [
+        "third-party-licenses/019-6ee6a14ba1/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/google/go-tpm",
+      "version": "v0.9.0",
+      "files": [
+        "third-party-licenses/020-20ced9cbf0/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/google/uuid",
+      "version": "v1.6.0",
+      "files": [
+        "third-party-licenses/021-561e97a8be/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/gorilla/websocket",
+      "version": "v1.5.3",
+      "files": [
+        "third-party-licenses/022-397b20cec6/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/inconshreveable/mousetrap",
+      "version": "v1.1.0",
+      "files": [
+        "third-party-licenses/023-bbea12fa22/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/itchyny/gojq",
+      "version": "v0.12.17",
+      "files": [
+        "third-party-licenses/024-72e5506a2a/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/itchyny/timefmt-go",
+      "version": "v0.1.6",
+      "files": [
+        "third-party-licenses/025-2237581b5b/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/larksuite/oapi-sdk-go/v3",
+      "version": "v3.7.2",
+      "files": [
+        "third-party-licenses/026-3c1e0ffd11/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/lucasb-eyer/go-colorful",
+      "version": "v1.2.0",
+      "files": [
+        "third-party-licenses/027-3d26087e59/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/mattn/go-isatty",
+      "version": "v0.0.20",
+      "files": [
+        "third-party-licenses/028-ce39fdae6c/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/mattn/go-runewidth",
+      "version": "v0.0.16",
+      "files": [
+        "third-party-licenses/030-21b11f10d3/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/mitchellh/hashstructure/v2",
+      "version": "v2.0.2",
+      "files": [
+        "third-party-licenses/031-f125bdcc68/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/muesli/ansi",
+      "version": "v0.0.0-20230316100256-276c6243b2f6",
+      "files": [
+        "third-party-licenses/032-8c5518717c/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/muesli/cancelreader",
+      "version": "v0.2.2",
+      "files": [
+        "third-party-licenses/033-698a20430f/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/muesli/termenv",
+      "version": "v0.16.0",
+      "files": [
+        "third-party-licenses/034-1803a5fd9c/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/rivo/uniseg",
+      "version": "v0.4.7",
+      "files": [
+        "third-party-licenses/035-12c130b46a/LICENSE.txt"
+      ]
+    },
+    {
+      "module": "github.com/sergi/go-diff",
+      "version": "v1.4.0",
+      "files": [
+        "third-party-licenses/036-70db0c9f79/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/skip2/go-qrcode",
+      "version": "v0.0.0-20200617195104-da1b6568686e",
+      "files": [
+        "third-party-licenses/037-b5372812ba/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/spf13/cobra",
+      "version": "v1.10.2",
+      "files": [
+        "third-party-licenses/038-c1f8de6eb8/LICENSE.txt"
+      ]
+    },
+    {
+      "module": "github.com/spf13/pflag",
+      "version": "v1.0.9",
+      "files": [
+        "third-party-licenses/039-9df872753e/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/xo/terminfo",
+      "version": "v0.0.0-20220910002029-abceb7e1c41e",
+      "files": [
+        "third-party-licenses/040-a20d2b61ec/LICENSE"
+      ]
+    },
+    {
+      "module": "github.com/zalando/go-keyring",
+      "version": "v0.2.8",
+      "files": [
+        "third-party-licenses/041-247c9be57e/LICENSE"
+      ]
+    },
+    {
+      "module": "golang.org/x/crypto",
+      "version": "v0.41.0",
+      "files": [
+        "third-party-licenses/042-a21cca9b57/LICENSE"
+      ]
+    },
+    {
+      "module": "golang.org/x/mod",
+      "version": "v0.27.0",
+      "files": [
+        "third-party-licenses/043-bb502977b9/LICENSE"
+      ]
+    },
+    {
+      "module": "golang.org/x/net",
+      "version": "v0.43.0",
+      "files": [
+        "third-party-licenses/044-46dc23c885/LICENSE"
+      ]
+    },
+    {
+      "module": "golang.org/x/sync",
+      "version": "v0.16.0",
+      "files": [
+        "third-party-licenses/045-a210ede2ff/LICENSE"
+      ]
+    },
+    {
+      "module": "golang.org/x/sys",
+      "version": "v0.35.0",
+      "files": [
+        "third-party-licenses/046-d8cdfe35da/LICENSE"
+      ]
+    },
+    {
+      "module": "golang.org/x/term",
+      "version": "v0.34.0",
+      "files": [
+        "third-party-licenses/047-f05f3801a6/LICENSE"
+      ]
+    },
+    {
+      "module": "golang.org/x/text",
+      "version": "v0.28.0",
+      "files": [
+        "third-party-licenses/048-48412653c3/LICENSE"
+      ]
+    },
+    {
+      "module": "gopkg.in/yaml.v3",
+      "version": "v3.0.1",
+      "files": [
+        "third-party-licenses/049-9852593ef9/LICENSE",
+        "third-party-licenses/049-9852593ef9/NOTICE"
+      ]
+    },
+    {
+      "module": "github.com/mattn/go-localereader",
+      "version": "v0.0.1",
+      "files": [
+        "third-party-licenses/go-localereader-v0.0.1/UPSTREAM-README.md",
+        "third-party-licenses/go-localereader-v0.0.1/UPSTREAM-CURRENT-LICENSE.txt"
+      ],
+      "note": "v0.0.1 archive has MIT declaration and author in README but no license file; full MIT text is from current upstream master."
+    }
+  ],
+  "missing": [],
+  "go_runtime_files": [
+    "third-party-licenses/go-stdlib/LICENSE",
+    "third-party-licenses/go-stdlib/PATENTS"
+  ]
+}

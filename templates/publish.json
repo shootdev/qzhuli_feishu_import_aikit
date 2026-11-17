@@ -1,0 +1,6 @@
+{
+  "mobile_default_ability": "bot",
+  "pc_default_ability": "bot",
+  "remark": "Enable employee-authorized document import for all employees.",
+  "changelog": "Seven document user scopes; one application scope for self-management; fixed OAuth redirect and all-employee availability."
+}

@@ -1,0 +1,40 @@
+{
+  "name": "feishu-app-kit",
+  "version": "1.0.100-docs7.2",
+  "permission_preset": "docs7-managed",
+  "base_repository": "https://github.com/larksuite/cli",
+  "base_tag": "v1.0.100",
+  "base_commit": "ac22a60a23d66c37d43a7ec6d9e99b99a4320356",
+  "patch_commit": "2948de1b8331f041cb1205f99b097b5aaa551f73",
+  "build_date": "2026-11-17",
+  "go_version": "go1.27.4",
+  "cgo_enabled": false,
+  "targets": [
+    "windows-amd64",
+    "windows-arm64",
+    "darwin-amd64",
+    "darwin-arm64",
+    "linux-amd64",
+    "linux-arm64"
+  ],
+  "user_scopes": [
+    "docs:document.content:read",
+    "docs:document.media:download",
+    "docx:document:readonly",
+    "drive:drive:readonly",
+    "offline_access",
+    "space:document:retrieve",
+    "wiki:wiki:readonly"
+  ],
+  "tenant_scopes": [
+    "application:application:patch"
+  ],
+  "redirect_url": "http://127.0.0.1:4366/oauth/callback",
+  "availability": "all employees",
+  "source_included": true,
+  "source_path": "src/lark-cli",
+  "source_commit": "2948de1b8331f041cb1205f99b097b5aaa551f73",
+  "source_git_history_included": false,
+  "go_dependencies_vendored": false,
+  "credential_export_source": "src/credential-export"
+}

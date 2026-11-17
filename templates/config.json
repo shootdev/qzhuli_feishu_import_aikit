@@ -1,0 +1,13 @@
+{
+  "security": {
+    "add": {
+      "redirect_urls": [
+        "http://127.0.0.1:4366/oauth/callback"
+      ]
+    },
+    "allow_refresh_token": true
+  },
+  "visibility": {
+    "is_visible_to_all": true
+  }
+}

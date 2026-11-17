@@ -1,0 +1,15 @@
+# Local account state and credential deliverables must stay out of the repository.
+/.lark-cli/
+/.env
+/.env.*
+!/.env.example
+/credentials*.json
+/*-credentials.json
+/app-secret*
+*.secret
+
+# Local build and verification outputs.
+/src/lark-cli/.tmp/
+/src/lark-cli/lark-cli-rebuilt*
+/src/lark-cli/feishu-credential-export-rebuilt*
+/dist/*.tmp

@@ -1,0 +1,21 @@
+Feishu App Kit 1.0.100-docs7.2
+
+This is a custom distribution based on the official larksuite/cli v1.0.100
+source, released by Lark Technologies Pte. Ltd. under the MIT License.
+It is not an official Lark/Feishu release.
+
+Changes use the SDK's minimal registration template with seven document user
+scopes and one tenant management scope. User OAuth remains restricted to the
+seven document scopes. The supplied source patch records the modifications.
+
+The package contains no live application credentials or account configuration.
+Each recipient must create or authorize their own application in their own tenant.
+
+Original source: https://github.com/larksuite/cli
+Base tag: v1.0.100
+Base commit: ac22a60a23d66c37d43a7ec6d9e99b99a4320356
+Go toolchain: go1.27.4
+
+Full modified CLI source is included in src/lark-cli. The snapshot excludes
+Git history, temporary files, credentials, and local account configuration.
+Go module dependencies are not vendored.

@@ -1,0 +1,1 @@
+dist/*-full-with-source.zip filter=lfs diff=lfs merge=lfs -text

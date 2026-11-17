@@ -1,0 +1,919 @@
+diff --git a/DOCS7.md b/DOCS7.md
+new file mode 100644
+index 0000000..5d695b9
+--- /dev/null
++++ b/DOCS7.md
+@@ -0,0 +1,91 @@
++# Seven user scopes plus application self-configuration
++
++This local distribution is based on official `larksuite/cli v1.0.100`
++(commit `ac22a60a23d66c37d43a7ec6d9e99b99a4320356`). Version
++`1.0.100-docs7.2` uses build policy `docs7-managed`.
++
++New applications use the official SDK minimal-template protocol (`preset:false`)
++with exactly seven document user scopes and exactly one tenant scope:
++`application:application:patch`. The user OAuth allowlist remains seven; the
++management scope is never requested as a user scope.
++
++## Build
++
++```sh
++make build VERSION=1.0.100-docs7.2
++```
++
++Without Make, use the equivalent command and choose the output filename for the
++host:
++
++```sh
++go build -trimpath -ldflags "-s -w -X github.com/larksuite/cli/internal/build.Version=1.0.100-docs7.2 -X github.com/larksuite/cli/internal/build.PermissionPreset=docs7-managed" -o lark-cli .
++```
++
++Plain `go build` without the policy linker flag retains upstream defaults and is
++not this distribution. Verify both the version and the dry-run payload.
++
++## Create, configure, and submit publication
++
++1. Run `lark-cli config init --new --dry-run`. Confirm seven user scopes, the
++   single tenant management scope, `preset:false`, and `create_only:true`.
++2. Run `lark-cli config init --new --brand feishu --name <unique-profile>`.
++   Open the generated URL and confirm the correct tenant and exact permissions.
++   Stop if the platform displays additional permissions. The CLI rejects missing
++   or unsafe SDK URLs instead of falling back to the broad CLI template.
++3. Save `configuration_defaults` and `publication_defaults` from the preview as
++   two local JSON files. They contain no credentials. The configuration adds
++   `http://127.0.0.1:4366/oauth/callback`, enables refresh tokens, and sets
++   `visibility.is_visible_to_all=true`. It does not overwrite other callbacks or
++   change contact data permissions.
++4. With the newly returned app ID and named profile, preview and execute:
++
++```text
++lark-cli api PATCH /open-apis/application/v7/applications/<app_id>/config --profile <profile> --as bot --data @config.json --dry-run
++lark-cli api PATCH /open-apis/application/v7/applications/<app_id>/config --profile <profile> --as bot --data @config.json
++lark-cli api POST /open-apis/application/v7/applications/<app_id>/publish --profile <profile> --as bot --data @publish.json --dry-run
++lark-cli api POST /open-apis/application/v7/applications/<app_id>/publish --profile <profile> --as bot --data @publish.json
++```
++
++The management scope must already be effective. These APIs only support eligible
++self-built app sources; do not assume every SDK-created app is eligible before
++live verification. Publication success means submitted, not approved. Version
++and availability read APIs may require other scopes; do not add them. Use the
++necessary console step to verify final status or complete required review.
++
++## User authorization and cleanup
++
++`auth login` defaults to the original seven user scopes. Extra scopes,
++`--domain`, `--recommend`, and `--exclude` are rejected before HTTP. Device flow
++resumption requires an allowed local scope record; tokens with extra or missing
++scope claims are rejected without storing them.
++
++Use tenant credentials only to configure this same app. Use user credentials for
++employee documents. Do not require user OAuth merely to configure or publish.
++After verification and delivery, remove only this task's local app binding and
++credentials. Keep the remote application, its authorized seven-plus-one scope
++configuration, unrelated profiles, and requested credential deliverables.
++
++## Checks
++
++```sh
++go test ./internal/auth ./cmd/auth ./cmd/config
++go vet ./internal/auth ./cmd/auth ./cmd/config
++node scripts/check-docs7.mjs <path-to-built-executable>
++```
++
++Focused tests enable the shipped build policy and check decoded registration
++payloads, actual user OAuth requests, rejection before HTTP, safe resumption,
++returned token scopes, and default configuration. Local tests do not prove live
++scope acceptance, callback persistence, app-source eligibility, approval, or
++all-employee availability.
++
++Official CLI updates can replace this binary. Recheck the version and preview
++before future creation; keep the backup and source patch for rebuilding.
++
++## Official references
++
++- [CLI registration source](https://github.com/larksuite/cli/blob/v1.0.100/internal/auth/app_registration.go)
++- [SDK minimal-template protocol](https://github.com/larksuite/oapi-sdk-go/tree/v3.13.0/scene/registration)
++- [Configuration API](https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/application-v7/application-v7/application-config/patch.md)
++- [Publication API](https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/application-v7/application-v7/application-publish/create.md)
+diff --git a/Makefile b/Makefile
+index 53fb32d..da8f824 100644
+--- a/Makefile
++++ b/Makefile
+@@ -3,7 +3,7 @@
+ 
+ BINARY   := lark-cli
+ MODULE   := github.com/larksuite/cli
+-VERSION  := $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
++VERSION  := $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)-docs7.2
+ DATE     := $(shell date +%Y-%m-%d)
+ NODE     ?= node
+ QUALITY_GATE_CHANGED_FROM ?= $(shell bash scripts/resolve-changed-from.sh)
+@@ -13,7 +13,8 @@ QUALITY_GATE_MANIFEST_OUT ?= $(QUALITY_GATE_DIR)/command-manifest.json
+ QUALITY_GATE_COMMAND_INDEX_OUT ?= $(QUALITY_GATE_DIR)/command-index.json
+ QUALITY_GATE_FACTS_OUT ?= $(QUALITY_GATE_DIR)/facts.json
+ PUBLIC_CONTENT_METADATA ?= $(QUALITY_GATE_DIR)/public-content-metadata.json
+-LDFLAGS  := -s -w -X $(MODULE)/internal/build.Version=$(VERSION) -X $(MODULE)/internal/build.Date=$(DATE)
++PERMISSION_PRESET ?= docs7-managed
++LDFLAGS  := -s -w -X $(MODULE)/internal/build.Version=$(VERSION) -X $(MODULE)/internal/build.Date=$(DATE) -X $(MODULE)/internal/build.PermissionPreset=$(PERMISSION_PRESET)
+ PREFIX   ?= /usr/local
+ 
+ # The repository's Go 1.23 CI toolchain does not support -race on riscv64.
+diff --git a/cmd/auth/document_preset.go b/cmd/auth/document_preset.go
+new file mode 100644
+index 0000000..0f196dd
+--- /dev/null
++++ b/cmd/auth/document_preset.go
+@@ -0,0 +1,39 @@
++// Copyright (c) 2026 Lark Technologies Pte. Ltd.
++// SPDX-License-Identifier: MIT
++
++package auth
++
++import (
++	"strings"
++
++	"github.com/larksuite/cli/errs"
++	larkauth "github.com/larksuite/cli/internal/auth"
++)
++
++func applyDocumentLoginPreset(opts *LoginOptions) error {
++	for flag, supplied := range map[string]bool{
++		"--domain": len(opts.Domains) > 0, "--recommend": opts.Recommend, "--exclude": len(opts.Exclude) > 0,
++	} {
++		if supplied {
++			return errs.NewValidationError(errs.SubtypeInvalidArgument,
++				"%s is disabled in the docs7-managed build; use the default seven scopes or an allowed --scope subset", flag).WithParam(flag)
++		}
++	}
++	if opts.DeviceCode != "" {
++		requested, err := loadLoginRequestedScope(opts.DeviceCode)
++		if err != nil || requested == "" {
++			return errs.NewValidationError(errs.SubtypeFailedPrecondition,
++				"docs7-managed cannot resume an authorization without a valid local requested-scope record").WithParam("--device-code")
++		}
++		if err := larkauth.ValidateDocumentScope(requested); err != nil {
++			return errs.NewValidationError(errs.SubtypeFailedPrecondition,
++				"recorded authorization is outside docs7-managed: %v", err).WithParam("--device-code").WithCause(err)
++		}
++		return nil
++	}
++	opts.Scope = normalizeScopeInput(opts.Scope)
++	if opts.Scope == "" {
++		opts.Scope = strings.Join(larkauth.DocumentUserScopes(), " ")
++	}
++	return larkauth.ValidateDocumentScope(opts.Scope)
++}
+diff --git a/cmd/auth/document_preset_test.go b/cmd/auth/document_preset_test.go
+new file mode 100644
+index 0000000..551d03d
+--- /dev/null
++++ b/cmd/auth/document_preset_test.go
+@@ -0,0 +1,89 @@
++// Copyright (c) 2026 Lark Technologies Pte. Ltd.
++// SPDX-License-Identifier: MIT
++
++package auth
++
++import (
++	"context"
++	"errors"
++	"net/url"
++	"strings"
++	"testing"
++
++	"github.com/larksuite/cli/errs"
++	larkauth "github.com/larksuite/cli/internal/auth"
++	"github.com/larksuite/cli/internal/build"
++	"github.com/larksuite/cli/internal/cmdutil"
++	"github.com/larksuite/cli/internal/core"
++	"github.com/larksuite/cli/internal/httpmock"
++)
++
++func enableDocumentPreset(t *testing.T) {
++	t.Helper()
++	old := build.PermissionPreset
++	build.PermissionPreset = "docs7-managed"
++	t.Cleanup(func() { build.PermissionPreset = old })
++}
++
++func TestDocumentLoginDefaultReachesWireWithSevenScopes(t *testing.T) {
++	enableDocumentPreset(t)
++	t.Setenv("LARKSUITE_CLI_CONFIG_DIR", t.TempDir())
++	f, _, _, registry := cmdutil.TestFactory(t, &core.CliConfig{ProfileName: "example", AppID: "cli_example", AppSecret: "example-secret", Brand: core.BrandFeishu})
++	stub := &httpmock.Stub{Method: "POST", URL: larkauth.PathDeviceAuthorization, Body: map[string]any{
++		"device_code": "example-device", "verification_uri_complete": "https://open.feishu.cn/example", "expires_in": 60,
++	}}
++	registry.Register(stub)
++	oldFetch := fetchRemoteScopes
++	fetchRemoteScopes = func(core.LarkBrand) (map[string][]string, bool) {
++		t.Fatal("docs-only login fetched the broad scope catalog")
++		return nil, false
++	}
++	t.Cleanup(func() { fetchRemoteScopes = oldFetch })
++	if err := authLoginRun(&LoginOptions{Factory: f, Ctx: context.Background(), NoWait: true, JSON: true}, builtinResolver(t)); err != nil {
++		t.Fatal(err)
++	}
++	form, err := url.ParseQuery(string(stub.CapturedBody))
++	if err != nil {
++		t.Fatal(err)
++	}
++	if got, want := form.Get("scope"), strings.Join(larkauth.DocumentUserScopes(), " "); got != want {
++		t.Fatalf("wire scopes=%q want=%q", got, want)
++	}
++	if cached, err := loadLoginRequestedScope("example-device"); err != nil || cached != form.Get("scope") {
++		t.Fatalf("scope cache mismatch: %q %v", cached, err)
++	}
++}
++
++func TestDocumentLoginRejectsBroadOptionsBeforeCredentials(t *testing.T) {
++	enableDocumentPreset(t)
++	for _, opts := range []*LoginOptions{{Recommend: true}, {Domains: []string{"all"}}, {Exclude: []string{"im:message"}}, {Scope: "application:application:patch"}} {
++		// A nil Factory would panic if execution proceeded to credentials or HTTP.
++		err := authLoginRun(opts, domainResolver{})
++		problem, ok := errs.ProblemOf(err)
++		var validation *errs.ValidationError
++		if !ok || problem.Category != errs.CategoryValidation || !errors.As(err, &validation) || validation.Param == "" {
++			t.Fatalf("missing typed rejection: %v", err)
++		}
++	}
++}
++
++func TestDocumentLoginResumeRequiresAllowedRecordedScopes(t *testing.T) {
++	enableDocumentPreset(t)
++	t.Setenv("LARKSUITE_CLI_CONFIG_DIR", t.TempDir())
++	opts := &LoginOptions{DeviceCode: "example-device"}
++	if err := applyDocumentLoginPreset(opts); err == nil {
++		t.Fatal("unrecorded authorization accepted")
++	}
++	if err := saveLoginRequestedScope(opts.DeviceCode, "im:message"); err != nil {
++		t.Fatal(err)
++	}
++	if err := applyDocumentLoginPreset(opts); err == nil {
++		t.Fatal("broad authorization resumed")
++	}
++	if err := saveLoginRequestedScope(opts.DeviceCode, strings.Join(larkauth.DocumentUserScopes(), " ")); err != nil {
++		t.Fatal(err)
++	}
++	if err := applyDocumentLoginPreset(opts); err != nil {
++		t.Fatal(err)
++	}
++}
+diff --git a/cmd/auth/login.go b/cmd/auth/login.go
+index 2132c90..cf89cd2 100644
+--- a/cmd/auth/login.go
++++ b/cmd/auth/login.go
+@@ -104,6 +104,13 @@ to generate QR codes (supports ASCII and PNG formats).`,
+ 	cmd.Flags().BoolVar(&opts.JSON, "json", false, "structured JSON output")
+ 	cmd.Flags().BoolVar(&opts.NoWait, "no-wait", false, "initiate device authorization and return immediately; use --device-code to complete")
+ 	cmd.Flags().StringVar(&opts.DeviceCode, "device-code", "", "poll and complete authorization with a device code from a previous --no-wait call")
++	if larkauth.DocumentsReadOnlyEnabled() {
++		cmd.Long = "Device Flow login for the docs7-managed build.\n\nDefaults to the fixed seven document user scopes. --scope accepts only a subset\nof those scopes; --domain, --recommend and --exclude are disabled.\nUse --no-wait --json to start, then --device-code to complete the same request."
++		cmd.Flags().Lookup("scope").Usage = "allowed document scopes only (default: the fixed seven user scopes)"
++		for _, flag := range []string{"domain", "recommend", "exclude"} {
++			cmd.Flags().Lookup(flag).Usage = "disabled in docs7-managed build"
++		}
++	}
+ 
+ 	cmdutil.RegisterFlagCompletion(cmd, "domain", func(_ *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+ 		return resolver.complete(toComplete, helpBrand), cobra.ShellCompDirectiveNoFileComp
+@@ -139,6 +146,11 @@ var fetchRemoteScopes = larkauth.FetchRemoteScopes
+ 
+ // authLoginRun executes the login command logic.
+ func authLoginRun(opts *LoginOptions, resolver domainResolver) error {
++	if larkauth.DocumentsReadOnlyEnabled() {
++		if err := applyDocumentLoginPreset(opts); err != nil {
++			return err
++		}
++	}
+ 	f := opts.Factory
+ 	// Policy is installed after auth commands are constructed. Read this build's
+ 	// completed snapshot at execution time, never the process-global policy.
+@@ -522,6 +534,9 @@ func authLoginPollDeviceCode(opts *LoginOptions, config *core.CliConfig, msg *lo
+ 	}
+ 
+ 	if !result.OK {
++		if result.Error == "scope_outside_preset" {
++			cleanupRequestedScope()
++		}
+ 		if result.Err != nil {
+ 			return result.Err
+ 		}
+diff --git a/cmd/config/document_preset.go b/cmd/config/document_preset.go
+new file mode 100644
+index 0000000..c31e2b7
+--- /dev/null
++++ b/cmd/config/document_preset.go
+@@ -0,0 +1,72 @@
++// Copyright (c) 2026 Lark Technologies Pte. Ltd.
++// SPDX-License-Identifier: MIT
++
++package config
++
++import (
++	"github.com/larksuite/cli/errs"
++	larkauth "github.com/larksuite/cli/internal/auth"
++	"github.com/larksuite/cli/internal/output"
++)
++
++func documentRegistrationHelp() string {
++	if !larkauth.DocumentsReadOnlyEnabled() {
++		return ""
++	}
++	return "\n\nPermission preset: docs7-managed. New apps use preset=false, one tenant scope\n(application:application:patch), and exactly seven document user scopes.\nUser login still permits only those seven user scopes. There is no broad-template fallback.\nUse the dry-run configuration/publication defaults with lark-cli api --as bot\nto configure this app and submit publication. Tenant approval remains separate."
++}
++
++type documentConfigurationDefaults struct {
++	Security struct {
++		Add struct {
++			RedirectURLs []string `json:"redirect_urls"`
++		} `json:"add"`
++		AllowRefreshToken bool `json:"allow_refresh_token"`
++	} `json:"security"`
++	Visibility struct {
++		IsVisibleToAll bool `json:"is_visible_to_all"`
++	} `json:"visibility"`
++}
++
++type documentPublicationDefaults struct {
++	MobileDefaultAbility string `json:"mobile_default_ability"`
++	PCDefaultAbility     string `json:"pc_default_ability"`
++	Remark               string `json:"remark"`
++	Changelog            string `json:"changelog"`
++}
++
++func defaultDocumentConfiguration() documentConfigurationDefaults {
++	var config documentConfigurationDefaults
++	config.Security.Add.RedirectURLs = []string{"http://127.0.0.1:4366/oauth/callback"}
++	config.Security.AllowRefreshToken = true
++	config.Visibility.IsVisibleToAll = true
++	return config
++}
++
++func defaultDocumentPublication() documentPublicationDefaults {
++	return documentPublicationDefaults{
++		MobileDefaultAbility: "bot", PCDefaultAbility: "bot",
++		Remark:    "Enable employee-authorized document import for all employees.",
++		Changelog: "Seven document user scopes; one application scope for self-management; fixed OAuth redirect and all-employee availability.",
++	}
++}
++
++func previewDocumentRegistration(opts *ConfigInitOptions) error {
++	if !larkauth.DocumentsReadOnlyEnabled() || !opts.New || opts.AppID != "" || opts.AppSecretStdin {
++		return errs.NewValidationError(errs.SubtypeInvalidArgument,
++			"--dry-run requires config init --new in a docs7-managed build, without existing-app credentials").WithParam("--dry-run")
++	}
++	output.PrintJson(opts.Factory.IOStreams.Out, struct {
++		DryRun           bool                          `json:"dry_run"`
++		PermissionPreset string                        `json:"permission_preset"`
++		CreateOnly       bool                          `json:"create_only"`
++		Addons           larkauth.DocumentAppAddons    `json:"addons"`
++		Configuration    documentConfigurationDefaults `json:"configuration_defaults"`
++		Publication      documentPublicationDefaults   `json:"publication_defaults"`
++	}{
++		DryRun: true, PermissionPreset: "docs7-managed", CreateOnly: true,
++		Addons:        larkauth.DocumentRegistrationAddons(),
++		Configuration: defaultDocumentConfiguration(), Publication: defaultDocumentPublication(),
++	})
++	return nil
++}
+diff --git a/cmd/config/document_preset_test.go b/cmd/config/document_preset_test.go
+new file mode 100644
+index 0000000..c4172fb
+--- /dev/null
++++ b/cmd/config/document_preset_test.go
+@@ -0,0 +1,46 @@
++// Copyright (c) 2026 Lark Technologies Pte. Ltd.
++// SPDX-License-Identifier: MIT
++
++package config
++
++import (
++	"encoding/json"
++	"strings"
++	"testing"
++
++	"github.com/larksuite/cli/internal/build"
++	"github.com/larksuite/cli/internal/cmdutil"
++)
++
++func TestDocumentRegistrationDryRunDoesNotNeedCredentials(t *testing.T) {
++	old := build.PermissionPreset
++	build.PermissionPreset = "docs7-managed"
++	t.Cleanup(func() { build.PermissionPreset = old })
++	f, stdout, _, _ := cmdutil.TestFactory(t, nil)
++	cmd := NewCmdConfigInit(f, nil)
++	cmd.SetArgs([]string{"--new", "--dry-run"})
++	if err := cmd.Execute(); err != nil {
++		t.Fatal(err)
++	}
++	var result struct {
++		DryRun     bool `json:"dry_run"`
++		CreateOnly bool `json:"create_only"`
++		Addons     struct {
++			Preset *bool `json:"preset"`
++			Scopes struct {
++				Tenant []string `json:"tenant"`
++				User   []string `json:"user"`
++			} `json:"scopes"`
++		} `json:"addons"`
++	}
++	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
++		t.Fatal(err)
++	}
++	if !result.DryRun || !result.CreateOnly || result.Addons.Preset == nil || *result.Addons.Preset || len(result.Addons.Scopes.Tenant) != 1 || result.Addons.Scopes.Tenant[0] != "application:application:patch" || len(result.Addons.Scopes.User) != 7 {
++		t.Fatalf("unsafe dry-run: %s", stdout.String())
++	}
++	ProjectInitHelp(cmd, false)
++	if !strings.Contains(cmd.Long, "exactly seven document user scopes") {
++		t.Fatal("projected help lost permission policy")
++	}
++}
+diff --git a/cmd/config/init.go b/cmd/config/init.go
+index 6354745..050fc40 100644
+--- a/cmd/config/init.go
++++ b/cmd/config/init.go
+@@ -45,6 +45,7 @@ type ConfigInitOptions struct {
+ 	// supported Agent-app setup flow remains the default. Manual users with
+ 	// a legitimate need for a separate app can pass --force-init to bypass.
+ 	ForceInit bool
++	DryRun    bool
+ }
+ 
+ const (
+@@ -93,6 +94,9 @@ func NewCmdConfigInit(f *cmdutil.Factory, runF func(*ConfigInitOptions) error) *
+ 			if err := validateInitLang(opts); err != nil {
+ 				return err
+ 			}
++			if opts.DryRun {
++				return previewDocumentRegistration(opts)
++			}
+ 			if err := guardAgentWorkspace(opts); err != nil {
+ 				return err
+ 			}
+@@ -104,6 +108,7 @@ func NewCmdConfigInit(f *cmdutil.Factory, runF func(*ConfigInitOptions) error) *
+ 	}
+ 
+ 	cmd.Flags().BoolVar(&opts.New, "new", false, "create a new app directly (skip mode selection)")
++	cmd.Flags().BoolVar(&opts.DryRun, "dry-run", false, "preview the docs7-managed new-app request without network or credential writes")
+ 	cmd.Flags().StringVar(&opts.AppID, "app-id", "", "App ID (non-interactive)")
+ 	cmd.Flags().BoolVar(&opts.AppSecretStdin, "app-secret-stdin", false, "Read App Secret from stdin to avoid process list exposure")
+ 	cmd.Flags().StringVar(&opts.Brand, "brand", "feishu", "feishu or lark (non-interactive, default feishu)")
+@@ -111,6 +116,7 @@ func NewCmdConfigInit(f *cmdutil.Factory, runF func(*ConfigInitOptions) error) *
+ 	cmd.Flags().StringVar(&opts.ProfileName, "name", "", "create or update a named profile (append instead of replace)")
+ 	cmd.Flags().BoolVar(&opts.ForceInit, "force-init", false, forceInitUsageWithBind)
+ 	cmdutil.SetRisk(cmd, "write")
++	cmd.Long += documentRegistrationHelp()
+ 
+ 	return cmd
+ }
+@@ -127,7 +133,7 @@ func ProjectInitHelp(cmd *cobra.Command, canReferenceBind bool) {
+ 	if !canReferenceBind {
+ 		long, forceInitUsage = configInitLongWithoutBind, forceInitUsageWithoutBind
+ 	}
+-	cmd.Long = long
++	cmd.Long = long + documentRegistrationHelp()
+ 	if flag := cmd.Flags().Lookup("force-init"); flag != nil {
+ 		flag.Usage = forceInitUsage
+ 	}
+diff --git a/cmd/config/init_interactive.go b/cmd/config/init_interactive.go
+index 5c9625c..fcc129b 100644
+--- a/cmd/config/init_interactive.go
++++ b/cmd/config/init_interactive.go
+@@ -235,6 +235,9 @@ func runCreateAppFlow(ctx context.Context, f *cmdutil.Factory, brandOverride cor
+ // classifyRegistrationBeginError keeps transport/cancellation failures out of
+ // the invalid-client category: the begin request sends no app credentials.
+ func classifyRegistrationBeginError(err error) error {
++	if errs.IsTyped(err) {
++		return err
++	}
+ 	switch {
+ 	case errors.Is(err, context.Canceled):
+ 		return errs.NewAuthenticationError(errs.SubtypeUnknown, "app registration cancelled").WithCause(err)
+diff --git a/internal/auth/app_registration.go b/internal/auth/app_registration.go
+index 495bc60..8c85569 100644
+--- a/internal/auth/app_registration.go
++++ b/internal/auth/app_registration.go
+@@ -160,6 +160,18 @@ func RequestAppRegistration(ctx context.Context, httpClient *http.Client, brand
+ 	// The confirmation page is CLI-owned presentation (shown as a link/QR code,
+ 	// never fetched), so it passes through the URL rewrite extension.
+ 	verificationUriComplete := urlrewrite.Rewrite(fmt.Sprintf("%s/page/cli?user_code=%s", ep.Open, userCode))
++	if DocumentsReadOnlyEnabled() {
++		var sdkPage struct {
++			VerificationURL string `json:"verification_uri_complete"`
++		}
++		if err := json.Unmarshal(body, &sdkPage); err != nil {
++			return nil, fmt.Errorf("app registration returned invalid SDK verification metadata: %w", err)
++		}
++		verificationUriComplete, err = documentRegistrationURL(sdkPage.VerificationURL, brand)
++		if err != nil {
++			return nil, err
++		}
++	}
+ 
+ 	return &AppRegistrationResponse{
+ 		DeviceCode:              deviceCode,
+@@ -173,6 +185,10 @@ func RequestAppRegistration(ctx context.Context, httpClient *http.Client, brand
+ 
+ // BuildVerificationURL appends CLI tracking parameters to the verification URL.
+ func BuildVerificationURL(baseURL, cliVersion string) string {
++	if DocumentsReadOnlyEnabled() {
++		// The SDK URL already includes the strict preset and source parameters.
++		return baseURL
++	}
+ 	sep := "&"
+ 	if !strings.Contains(baseURL, "?") {
+ 		sep = "?"
+diff --git a/internal/auth/device_flow.go b/internal/auth/device_flow.go
+index 2380e04..085ce48 100644
+--- a/internal/auth/device_flow.go
++++ b/internal/auth/device_flow.go
+@@ -77,6 +77,11 @@ func ResolveOAuthEndpoints(brand core.LarkBrand) OAuthEndpoints {
+ 
+ // RequestDeviceAuthorization requests a device authorization code.
+ func RequestDeviceAuthorization(ctx context.Context, httpClient *http.Client, appId, appSecret string, brand core.LarkBrand, scope string, errOut io.Writer) (*DeviceAuthResponse, error) {
++	if DocumentsReadOnlyEnabled() {
++		if err := ValidateDocumentScope(scope); err != nil {
++			return nil, err
++		}
++	}
+ 	endpoints := ResolveOAuthEndpoints(brand)
+ 
+ 	if !strings.Contains(scope, "offline_access") {
+@@ -397,6 +402,12 @@ func pollDeviceToken(ctx context.Context, httpClient *http.Client, appId, appSec
+ 		}
+ 
+ 		if errStr == "" && getStr(data, "access_token") != "" {
++			if DocumentsReadOnlyEnabled() {
++				if err := ValidateDocumentScope(getStr(data, "scope")); err != nil {
++					return &DeviceFlowResult{OK: false, Error: "scope_outside_preset", Message: "returned token scopes do not satisfy docs7-managed; token was not stored", Err: errs.NewAuthenticationError(
++						errs.SubtypeUnknown, "docs7-managed rejected returned token scopes: %v", err).WithCause(err)}, nil
++				}
++			}
+ 			tokenType := getStr(data, "token_type")
+ 			if proofKey != nil && !strings.EqualFold(tokenType, dpop.TokenType) {
+ 				if !allowProofFallback || !strings.EqualFold(tokenType, StoredTokenTypeBearer) {
+diff --git a/internal/auth/document_preset.go b/internal/auth/document_preset.go
+new file mode 100644
+index 0000000..e95cbb7
+--- /dev/null
++++ b/internal/auth/document_preset.go
+@@ -0,0 +1,109 @@
++// Copyright (c) 2026 Lark Technologies Pte. Ltd.
++// SPDX-License-Identifier: MIT
++
++package auth
++
++import (
++	"bytes"
++	"compress/gzip"
++	"encoding/base64"
++	"encoding/json"
++	"net/url"
++	"slices"
++	"strings"
++
++	"github.com/larksuite/cli/errs"
++	"github.com/larksuite/cli/internal/build"
++	"github.com/larksuite/cli/internal/core"
++)
++
++// DocumentsReadOnlyEnabled is a build-time distribution policy, not an OAuth scope.
++func DocumentsReadOnlyEnabled() bool {
++	return build.PermissionPreset == "docs7-managed"
++}
++
++// DocumentUserScopes returns a fresh copy of the seven user-approved scopes.
++func DocumentUserScopes() []string {
++	return []string{
++		"docs:document.content:read",
++		"docs:document.media:download",
++		"docx:document:readonly",
++		"drive:drive:readonly",
++		"offline_access",
++		"space:document:retrieve",
++		"wiki:wiki:readonly",
++	}
++}
++
++// DocumentAppAddons follows the official registration SDK's addons wire format.
++// Preset must be serialized even when false; omitting it restores broad defaults.
++type DocumentAppAddons struct {
++	Preset bool `json:"preset"`
++	Scopes struct {
++		Tenant []string `json:"tenant"`
++		User   []string `json:"user"`
++	} `json:"scopes"`
++}
++
++func DocumentRegistrationAddons() DocumentAppAddons {
++	var addons DocumentAppAddons
++	addons.Scopes.Tenant = []string{"application:application:patch"}
++	addons.Scopes.User = DocumentUserScopes()
++	return addons
++}
++
++// ValidateDocumentScope rejects expansion before any authorization request.
++// It also validates granted scopes without silently removing unexpected claims.
++func ValidateDocumentScope(scope string) error {
++	if strings.TrimSpace(scope) == "" {
++		return errs.NewValidationError(errs.SubtypeInvalidArgument, "docs7-managed requires a non-empty scope list").WithParam("--scope")
++	}
++	allowed := DocumentUserScopes()
++	for _, item := range strings.Fields(scope) {
++		if !slices.Contains(allowed, item) {
++			return errs.NewValidationError(errs.SubtypeInvalidArgument,
++				"docs7-managed does not permit scope %q", item).WithParam("--scope")
++		}
++	}
++	return nil
++}
++
++// documentRegistrationURL uses the server's SDK confirmation URL. /page/cli
++// does not consume addons, so falling back to that page could grant extra scopes.
++func documentRegistrationURL(raw string, brand core.LarkBrand) (string, error) {
++	u, err := url.Parse(raw)
++	if err != nil || raw == "" || u.Scheme != "https" || u.User != nil || u.Fragment != "" || u.Path == "/page/cli" {
++		return "", errs.NewConfigError(errs.SubtypeInvalidConfig, "docs7-managed registration requires a valid SDK verification URL; no default-template fallback is allowed")
++	}
++	ep := core.ResolveEndpoints(brand)
++	openURL, openErr := url.Parse(ep.Open)
++	accountsURL, accountsErr := url.Parse(ep.Accounts)
++	if openErr != nil || accountsErr != nil || (u.Host != openURL.Host && u.Host != accountsURL.Host) {
++		return "", errs.NewConfigError(errs.SubtypeInvalidConfig, "docs7-managed registration returned an unexpected verification host")
++	}
++	query := u.Query()
++	if query.Get("user_code") == "" {
++		return "", errs.NewConfigError(errs.SubtypeInvalidConfig, "docs7-managed registration returned a verification URL without user_code")
++	}
++	body, err := json.Marshal(DocumentRegistrationAddons())
++	if err != nil {
++		return "", errs.NewInternalError(errs.SubtypeSDKError, "encode document registration config: %v", err).WithCause(err)
++	}
++	var compressed bytes.Buffer
++	w := gzip.NewWriter(&compressed)
++	if _, err := w.Write(body); err != nil {
++		_ = w.Close()
++		return "", errs.NewInternalError(errs.SubtypeSDKError, "compress document registration config: %v", err).WithCause(err)
++	}
++	if err := w.Close(); err != nil {
++		return "", errs.NewInternalError(errs.SubtypeSDKError, "finish document registration config: %v", err).WithCause(err)
++	}
++	query.Set("from", "sdk")
++	query.Set("tp", "sdk")
++	query.Set("source", "lark-cli/docs7-managed")
++	query.Set("createOnly", "true")
++	query.Del("clientID")
++	query.Set("addons", base64.RawURLEncoding.EncodeToString(compressed.Bytes()))
++	u.RawQuery = query.Encode()
++	return u.String(), nil
++}
+diff --git a/internal/auth/document_preset_test.go b/internal/auth/document_preset_test.go
+new file mode 100644
+index 0000000..fd797e4
+--- /dev/null
++++ b/internal/auth/document_preset_test.go
+@@ -0,0 +1,143 @@
++// Copyright (c) 2026 Lark Technologies Pte. Ltd.
++// SPDX-License-Identifier: MIT
++
++package auth
++
++import (
++	"bytes"
++	"compress/gzip"
++	"context"
++	"encoding/base64"
++	"encoding/json"
++	"io"
++	"net/http"
++	"net/url"
++	"slices"
++	"strings"
++	"testing"
++
++	"github.com/larksuite/cli/errs"
++	"github.com/larksuite/cli/internal/build"
++	"github.com/larksuite/cli/internal/core"
++)
++
++func enableDocumentPreset(t *testing.T) {
++	t.Helper()
++	old := build.PermissionPreset
++	build.PermissionPreset = "docs7-managed"
++	t.Cleanup(func() { build.PermissionPreset = old })
++}
++
++func TestDocumentRegistrationRequestUsesMinimalSDKPage(t *testing.T) {
++	enableDocumentPreset(t)
++	client := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
++		if err := r.ParseForm(); err != nil {
++			t.Fatal(err)
++		}
++		if r.Method != http.MethodPost || r.Form.Get("action") != "begin" || r.Form.Get("archetype") != "PersonalAgent" {
++			t.Fatalf("unexpected registration request: %s %v", r.Method, r.Form)
++		}
++		return jsonResponse(`{"device_code":"example-device","user_code":"example-code","verification_uri_complete":"https://open.feishu.cn/page/openclaw?user_code=example-code&clientID=cli_example&custom=preserved","expire_in":60}`), nil
++	})}
++	response, err := RequestAppRegistration(context.Background(), client, core.BrandFeishu, io.Discard)
++	if err != nil {
++		t.Fatal(err)
++	}
++	u, err := url.Parse(BuildVerificationURL(response.VerificationUriComplete, "1.0.100-docs7.2"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	q := u.Query()
++	if u.Path != "/page/openclaw" || q.Get("user_code") != "example-code" || q.Get("custom") != "preserved" || q.Get("from") != "sdk" || q.Get("tp") != "sdk" || q.Get("createOnly") != "true" || q.Has("clientID") {
++		t.Fatalf("unsafe confirmation URL: %s", u)
++	}
++	compressed, err := base64.RawURLEncoding.DecodeString(q.Get("addons"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	r, err := gzip.NewReader(bytes.NewReader(compressed))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer r.Close()
++	var payload struct {
++		Preset *bool `json:"preset"`
++		Scopes struct {
++			Tenant []string `json:"tenant"`
++			User   []string `json:"user"`
++		} `json:"scopes"`
++	}
++	if err := json.NewDecoder(r).Decode(&payload); err != nil {
++		t.Fatal(err)
++	}
++	want := []string{"docs:document.content:read", "docs:document.media:download", "docx:document:readonly", "drive:drive:readonly", "offline_access", "space:document:retrieve", "wiki:wiki:readonly"}
++	if payload.Preset == nil || *payload.Preset || !slices.Equal(payload.Scopes.Tenant, []string{"application:application:patch"}) || !slices.Equal(payload.Scopes.User, want) {
++		t.Fatalf("wrong permission payload: %+v", payload)
++	}
++}
++
++func TestDocumentRegistrationRejectsUnsafeOrMissingPage(t *testing.T) {
++	enableDocumentPreset(t)
++	for _, raw := range []string{"", "http://open.feishu.cn/page/openclaw?user_code=example", "https://open.feishu.cn/page/cli?user_code=example", "https://example.com/page/openclaw?user_code=example", "https://open.feishu.cn/page/openclaw"} {
++		t.Run(raw, func(t *testing.T) {
++			body, _ := json.Marshal(map[string]any{"device_code": "example", "verification_uri_complete": raw})
++			client := &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) { return jsonResponse(string(body)), nil })}
++			got, err := RequestAppRegistration(context.Background(), client, core.BrandFeishu, io.Discard)
++			if err == nil || got != nil || !errs.IsTyped(err) {
++				t.Fatalf("unsafe URL accepted: response=%v error=%v", got, err)
++			}
++		})
++	}
++}
++
++func TestDocumentDeviceAuthorizationRejectsExpansionBeforeHTTP(t *testing.T) {
++	enableDocumentPreset(t)
++	for _, scope := range []string{"", "im:message", "docs:document.content:read application:application:patch", "offline_access contact:user.basic_profile:readonly"} {
++		called := false
++		client := &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) { called = true; return jsonResponse(`{}`), nil })}
++		_, err := RequestDeviceAuthorization(context.Background(), client, "cli_example", "example-secret", core.BrandFeishu, scope, io.Discard)
++		if err == nil || called || !errs.IsTyped(err) {
++			t.Fatalf("scope expansion not blocked: %q error=%v HTTP=%v", scope, err, called)
++		}
++	}
++}
++
++func TestDocumentDeviceAuthorizationSendsOnlySevenScopes(t *testing.T) {
++	enableDocumentPreset(t)
++	want := strings.Join(DocumentUserScopes(), " ")
++	client := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
++		if err := r.ParseForm(); err != nil {
++			t.Fatal(err)
++		}
++		if r.Form.Get("scope") != want {
++			t.Fatalf("unexpected wire scopes: %q", r.Form.Get("scope"))
++		}
++		return jsonResponse(`{"device_code":"example-device","verification_uri_complete":"https://open.feishu.cn/example","expires_in":60}`), nil
++	})}
++	if _, err := RequestDeviceAuthorization(context.Background(), client, "cli_example", "example-secret", core.BrandFeishu, want, io.Discard); err != nil {
++		t.Fatal(err)
++	}
++}
++
++func TestDocumentTokenDoesNotAcceptExtraOrUnverifiableScopes(t *testing.T) {
++	enableDocumentPreset(t)
++	for _, scope := range []string{"", "offline_access im:message"} {
++		body, _ := json.Marshal(map[string]any{"access_token": "EXAMPLE_TOKEN", "token_type": "Bearer", "scope": scope})
++		client := &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) { return jsonResponse(string(body)), nil })}
++		result, err := PollDeviceToken(context.Background(), client, "cli_example", "example-secret", core.BrandFeishu, "example-device", 1, 10, io.Discard)
++		if err != nil || result.OK || result.Token != nil || result.Err == nil || result.Error != "scope_outside_preset" {
++			t.Fatalf("unexpected token result: %+v error=%v", result, err)
++		}
++	}
++}
++
++func TestDocumentTokenAcceptsSevenScopesWithoutRewriting(t *testing.T) {
++	enableDocumentPreset(t)
++	scope := strings.Join(DocumentUserScopes(), " ")
++	body, _ := json.Marshal(map[string]any{"access_token": "EXAMPLE_TOKEN", "refresh_token": "EXAMPLE_REFRESH_TOKEN", "token_type": "Bearer", "scope": scope})
++	client := &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) { return jsonResponse(string(body)), nil })}
++	result, err := PollDeviceToken(context.Background(), client, "cli_example", "example-secret", core.BrandFeishu, "example-device", 1, 10, io.Discard)
++	if err != nil || !result.OK || result.Token == nil || result.Token.Scope != scope {
++		t.Fatalf("allowed token rejected or scope rewritten: result=%+v error=%v", result, err)
++	}
++}
+diff --git a/internal/build/build.go b/internal/build/build.go
+index 865a475..0868c7e 100644
+--- a/internal/build/build.go
++++ b/internal/build/build.go
+@@ -11,6 +11,10 @@ var Version = "DEV"
+ // Date is the build date in YYYY-MM-DD format, set by -ldflags.
+ var Date = ""
+ 
++// PermissionPreset selects this distribution's permission policy at build time.
++// The docs-readonly build is installed separately from the upstream binary.
++var PermissionPreset = ""
++
+ func init() {
+ 	if Version == "DEV" {
+ 		if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "(devel)" {
+diff --git a/scripts/check-docs7.mjs b/scripts/check-docs7.mjs
+new file mode 100644
+index 0000000..a17c448
+--- /dev/null
++++ b/scripts/check-docs7.mjs
+@@ -0,0 +1,80 @@
++// Copyright (c) 2026 Lark Technologies Pte. Ltd.
++// SPDX-License-Identifier: MIT
++
++// Offline acceptance checks for the actual executable, with no account state.
++import assert from 'node:assert/strict';
++import { spawnSync } from 'node:child_process';
++import { existsSync, lstatSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
++import { tmpdir } from 'node:os';
++import path from 'node:path';
++
++const executable = path.resolve(process.argv[2] || './lark-cli');
++const tempRoot = realpathSync(tmpdir());
++const sandbox = mkdtempSync(path.join(tempRoot, 'lark-cli-docs7-check-'));
++const env = { ...process.env };
++for (const key of Object.keys(env)) {
++  if (/^LARKSUITE_CLI_/i.test(key) || /^(HERMES_HOME|OPENCLAW_HOME)$/i.test(key)) delete env[key];
++}
++Object.assign(env, {
++  LARKSUITE_CLI_CONFIG_DIR: path.join(sandbox, 'config'),
++  LARKSUITE_CLI_LOG_DIR: path.join(sandbox, 'logs'),
++  LARKSUITE_CLI_NO_UPDATE_NOTIFIER: '1',
++  LARKSUITE_CLI_NO_SKILLS_NOTIFIER: '1',
++});
++
++const scopes = [
++  'docs:document.content:read', 'docs:document.media:download',
++  'docx:document:readonly', 'drive:drive:readonly', 'offline_access',
++  'space:document:retrieve', 'wiki:wiki:readonly',
++];
++function run(args) {
++  const result = spawnSync(executable, args, { env, encoding: 'utf8', timeout: 30000, windowsHide: true });
++  if (result.error) throw result.error;
++  return result;
++}
++
++try {
++  const version = run(['--version']);
++  assert.equal(version.status, 0);
++  assert.match(version.stdout, /docs7/);
++  const preview = run(['config', 'init', '--new', '--dry-run']);
++  assert.equal(preview.status, 0, preview.stderr);
++  const payload = JSON.parse(preview.stdout);
++  assert.equal(payload.permission_preset, 'docs7-managed');
++  assert.equal(payload.dry_run, true);
++  assert.equal(payload.create_only, true);
++  assert.equal(payload.addons.preset, false);
++  assert.deepEqual(payload.addons.scopes.tenant, ['application:application:patch']);
++  assert.deepEqual(payload.configuration_defaults.security.add.redirect_urls, ['http://127.0.0.1:4366/oauth/callback']);
++  assert.equal(payload.configuration_defaults.security.allow_refresh_token, true);
++  assert.equal(payload.configuration_defaults.visibility.is_visible_to_all, true);
++  assert.equal(payload.publication_defaults.pc_default_ability, 'bot');
++  assert.equal(payload.publication_defaults.mobile_default_ability, 'bot');
++  assert.deepEqual([...payload.addons.scopes.user].sort(), [...scopes].sort());
++
++  const denied = [
++    ['--scope', 'application:application:patch'],
++    ['--scope', 'docx:document:readonly im:message'],
++    ['--domain', 'all'],
++    ['--recommend'],
++    ['--exclude', 'im:message'],
++    ['--device-code', 'EXAMPLE_DEVICE_WITHOUT_CACHE'],
++  ];
++  for (const args of denied) {
++    const result = run(['auth', 'login', ...args]);
++    assert.equal(result.status, 2, `expected local validation rejection for ${args[0]}: ${result.stderr}`);
++    const error = JSON.parse(result.stderr);
++    assert.equal(error.ok, false);
++    assert.equal(error.error.type, 'validation');
++    assert.equal(error.error.param, args[0]);
++  }
++  assert.equal(existsSync(path.join(env.LARKSUITE_CLI_CONFIG_DIR, 'config.json')), false);
++  console.log(JSON.stringify({ version: version.stdout.trim(), dry_run: 'passed', seven_user_scopes: 'passed', single_management_tenant_scope: 'passed', callback_and_all_employee_defaults: 'passed', rejected_unsafe_requests: denied.length, local_binding_created: false }, null, 2));
++} finally {
++  // Only remove this script's freshly allocated, canonical child of the temp root.
++  const resolved = realpathSync(sandbox);
++  assert.equal(path.dirname(resolved), tempRoot);
++  assert.ok(path.basename(resolved).startsWith('lark-cli-docs7-check-'));
++  assert.equal(lstatSync(sandbox).isSymbolicLink(), false);
++  rmSync(resolved, { recursive: true, force: true });
++}
