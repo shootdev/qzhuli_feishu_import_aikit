@@ -13,3 +13,7 @@
 /src/lark-cli/lark-cli-rebuilt*
 /src/lark-cli/feishu-credential-export-rebuilt*
 /dist/*.tmp
+
+# Python test and import caches
+__pycache__/
+*.py[cod]

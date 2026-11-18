@@ -12,10 +12,9 @@
   "targets": [
     "windows-amd64",
     "windows-arm64",
-    "darwin-amd64",
-    "darwin-arm64",
     "linux-amd64",
-    "linux-arm64"
+    "linux-arm64",
+    "macos-python"
   ],
   "user_scopes": [
     "docs:document.content:read",
@@ -36,5 +35,14 @@
   "source_commit": "2948de1b8331f041cb1205f99b097b5aaa551f73",
   "source_git_history_included": false,
   "go_dependencies_vendored": false,
-  "credential_export_source": "src/credential-export"
+  "credential_export_source": "src/credential-export",
+  "macos": {
+    "runtime": "Python >= 3.8",
+    "architectures": [
+      "arm64",
+      "x86_64"
+    ],
+    "entrypoint": "feishu_app.py",
+    "native_binaries": false
+  }
 }

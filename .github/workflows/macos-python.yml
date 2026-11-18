@@ -1,0 +1,22 @@
+name: macOS Python app setup
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test the downloaded Python distribution
+        run: |
+          cd dist
+          archive=feishu-app-kit-1.0.100-docs7.2-macos-python.zip
+          shasum -a 256 -c "$archive.sha256"
+          unzip -q "$archive" -d "$RUNNER_TEMP/kit"
+          cd "$RUNNER_TEMP/kit/feishu-app-kit-1.0.100-docs7.2"
+          sh ./install.sh --skills-dir "$RUNNER_TEMP/skills"
+          python3 -B feishu_app.py preview
+          python3 -B -m unittest discover -s tests -p test_macos_python.py -v

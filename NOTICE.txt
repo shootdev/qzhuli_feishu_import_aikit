@@ -19,3 +19,7 @@ Go toolchain: go1.27.4
 Full modified CLI source is included in src/lark-cli. The snapshot excludes
 Git history, temporary files, credentials, and local account configuration.
 Go module dependencies are not vendored.
+
+The macOS edition uses Python. The bundled pure-Python QR Code generator
+(qrcodegen 1.8.0, Project Nayuki) is MIT-licensed. Its source includes the
+license text. Upstream: https://www.nayuki.io/page/qr-code-generator-library

@@ -7,6 +7,8 @@ description: 以 lark-shared 和定制 lark-cli 创建配置飞书企业自建�
 
 以 `lark-shared` 和 `docs7-managed` 定制版 `lark-cli` 完成创建、配置与提交发布。浏览器只处理登录、创建确认、接口不支持的步骤及必要的最终验收。`lark-cli apps +create` 创建妙搭应用，不用于本流程。
 
+在 macOS 上执行 [Python 版流程](references/macos-python.md)。从本技能目录运行 `python3 scripts/feishu_app.py preview`，随后使用同一脚本完成应用创建、权限核验、配置、发布及凭据交付。下文的 `lark-cli` 命令用于 Windows/Linux。
+
 ## 固定默认值
 
 除非用户明确修改，直接使用以下配置，不重复询问：

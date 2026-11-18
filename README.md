@@ -18,14 +18,26 @@ CLI 会以最小模板申请上述权限，并限制用户 OAuth 只请求七项
 | --- | --- | --- |
 | Windows Intel / AMD | [Windows x64](dist/feishu-app-kit-1.0.100-docs7.2-windows-x64.zip) | 16.5 MiB |
 | Windows ARM | [Windows ARM64](dist/feishu-app-kit-1.0.100-docs7.2-windows-arm64.zip) | 14.8 MiB |
-| macOS Apple Silicon | [Mac M 系列](dist/feishu-app-kit-1.0.100-docs7.2-macos-apple-silicon.zip) | 15.5 MiB |
-| macOS Intel | [Mac Intel](dist/feishu-app-kit-1.0.100-docs7.2-macos-intel.zip) | 16.6 MiB |
+| macOS Apple Silicon / Intel | [Python 脚本包](dist/feishu-app-kit-1.0.100-docs7.2-macos-python.zip) | 纯 Python |
 | Linux x64 | [Linux x64](dist/feishu-app-kit-1.0.100-docs7.2-linux-x64.zip) | 16.1 MiB |
 | Linux ARM64 | [Linux ARM64](dist/feishu-app-kit-1.0.100-docs7.2-linux-arm64.zip) | 14.7 MiB |
 
-[下载全平台包（含完整源码）](dist/feishu-app-kit-1.0.100-docs7.2-full-with-source.zip)。全平台 ZIP 因大小使用 Git LFS 存储；在 GitHub 页面可下载该文件。使用 Git 克隆并自动获取它需要安装 Git LFS。按系统小包包含对应二进制、技能与源码补丁，完整 CLI 源码可从本仓库 `src/lark-cli/` 获取。
+[下载全平台包（含完整源码）](dist/feishu-app-kit-1.0.100-docs7.2-full-with-source.zip)。全平台 ZIP 因大小使用 Git LFS 存储；在 GitHub 页面可下载该文件。使用 Git 克隆并自动获取它需要安装 Git LFS。Windows/Linux 小包包含对应二进制、技能与源码补丁，macOS 小包包含 Python 实现和技能，完整 CLI 源码可从本仓库 `src/lark-cli/` 获取。
 
-Windows 小包在 PowerShell 中运行 `./install.ps1 -AddToPath`；macOS/Linux 运行 `sh ./install.sh --add-to-path`。默认安装到当前用户目录，安装过程不创建应用或发起授权。安装后重新打开终端或 AI 应用，并运行：
+**macOS（Intel / Apple Silicon）**
+
+解压 Python 包，在解压目录使用 Python 3.8+ 执行：
+
+```sh
+python3 feishu_app.py preview
+python3 feishu_app.py create --output "$HOME/feishu-app-credentials.json"
+```
+
+同一脚本负责创建确认、核验七加一权限、设置回调、提交全员发布，以及交付本次凭据。可选的 `user-login` 用于员工 OAuth。二维码模块随包提供，直接运行无需 pip、Go 或 Node.js。要安装技能供 Agent 自动发现，可运行 `sh ./install.sh`。[macOS 使用说明](skills/feishu-enterprise-app-setup/references/macos-python.md)
+
+**Windows / Linux**
+
+Windows 小包在 PowerShell 中运行 `./install.ps1 -AddToPath`；Linux 运行 `sh ./install.sh --add-to-path`。默认安装到当前用户目录，安装过程不创建应用或发起授权。安装后重新打开终端或 AI 应用，并运行：
 
 ```text
 lark-cli --version
@@ -34,7 +46,7 @@ lark-cli config init --new --dry-run
 
 确认版本为 `1.0.100-docs7.2`，预览包含七项 user 权限、一项 tenant 管理权限、固定回调和全员范围。首次创建仍需本人登录飞书、选择企业并确认；企业要求审核时需完成审核。CLI 提交发布不等于审核通过。
 
-Windows x64、Linux x64（CentOS Stream 9 / WSL2）已实际安装和执行验证；其他架构与 macOS 已交叉编译和静态检查，尚未在对应设备上运行。macOS 程序未进行 Apple 开发者签名和公证。
+Windows x64 和 Linux x64 原生套件已通过安装与执行验证，Windows/Linux ARM64 已交叉编译。macOS Python 版的测试通过本地模拟服务验证创建和发布流程，真实飞书发布验证记录来自原 Go 版。[验证记录](VALIDATION.md)
 
 ## 使用 AI 技能
 

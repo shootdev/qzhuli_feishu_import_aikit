@@ -14,7 +14,7 @@
 
 ## 跨平台与安装
 
-目标为 Windows、macOS、Linux 的 x64/ARM64。所有目标均检查文件格式、目标架构、Go 构建信息和 SHA256。Windows x64 与 Linux x64（CentOS Stream 9 / WSL2）已执行安装、升级、备份和凭据导出检查；Linux 还检查了含空格和引号的安装路径。Windows ARM64、macOS x64/ARM64 和 Linux ARM64 仅完成交叉编译和静态检查，未在对应设备上运行。
+原生安装包支持 Windows、Linux 的 x64/ARM64。所有目标均检查文件格式、目标架构、Go 构建信息和 SHA256。Windows x64 与 Linux x64（CentOS Stream 9 / WSL2）已执行安装、升级、备份和凭据导出检查；Linux 还检查了含空格和引号的安装路径。Windows ARM64 和 Linux ARM64 仅完成交叉编译和静态检查，未在对应设备上运行。
 
 安装脚本只做本地版本/预览检查，不创建应用、不进行 OAuth，也不把发布者的账号配置迁移给接收者。安装脚本在 Windows PowerShell 与 Linux sh 上分别实测，包括既有技能保留、旧文件备份、带空格/引号的路径及校验和篡改拒绝。凭据导出仅使用虚构测试凭据；不会打印密钥，拒绝错误应用、覆盖文件和越界路径。
 
@@ -23,3 +23,7 @@
 - `src/lark-cli/` 与修改版提交 `2948de1b8331f041cb1205f99b097b5aaa551f73` 的 3,364 个受版本管理文件逐一校验一致，不含 Git 历史或临时文件。
 - 从套件源码快照运行十项定制权限回归测试、重新构建 CLI，并对构建出的程序执行七项用户权限、一项应用权限、固定回调和越界请求拒绝检查，均通过。
 - Go 依赖没有打包成 vendor，本机缓存缺少依赖时需联网获取。
+
+## macOS Python 版
+
+用标准库的本地 HTTP 服务模拟飞书接口，执行注册轮询、二维码、权限分页、配置和发布，检查请求载荷、重复提交保护、私密文件交付及用户授权范围。测试命令为 `python3 -B -m unittest discover -s tests -p test_macos_python.py -v`。GitHub Actions 也在 macOS runner 上运行这些用例。真实租户发布记录来自 Go 版。
